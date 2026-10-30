@@ -4,12 +4,13 @@ using HostelManagementEFCore.Services;
 
 using var db = new HostelDbContext();
 
-// Instantiate repositories
+// Repositories
 IRoomRepository roomRepo = new RoomRepository(db);
 IStudentRepository studentRepo = new StudentRepository(db);
+IAuditLogRepository auditRepo = new AuditLogRepository(db);
 
-// Inject into service
-var service = new HostelService(roomRepo, studentRepo);
+// Service
+var service = new HostelService(roomRepo, studentRepo, auditRepo);
 
 bool running = true;
 
@@ -21,7 +22,8 @@ while (running)
     Console.WriteLine("1. Add Room");
     Console.WriteLine("2. Add Student to Room");
     Console.WriteLine("3. View All Rooms & Students");
-    Console.WriteLine("4. Exit");
+    Console.WriteLine("4. View Audit Logs");
+    Console.WriteLine("5. Exit");
     Console.Write("\nEnter choice: ");
 
     var choice = Console.ReadLine();
@@ -56,12 +58,16 @@ while (running)
             break;
 
         case "4":
+            await service.DisplayAuditLogsAsync();
+            break;
+
+        case "5":
             running = false;
             Console.WriteLine("Exiting Hostel Management System. Goodbye!");
             break;
 
         default:
-            Console.WriteLine("Invalid option. Please choose between 1 and 4.");
+            Console.WriteLine("Invalid option. Please choose between 1 and 5.");
             break;
     }
 }

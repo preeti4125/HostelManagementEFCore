@@ -7,11 +7,16 @@ namespace HostelManagementEFCore.Services
     {
         private readonly IRoomRepository _roomRepo;
         private readonly IStudentRepository _studentRepo;
+        private readonly IAuditLogRepository _auditRepo; // Injected audit repository
 
-        public HostelService(IRoomRepository roomRepo, IStudentRepository studentRepo)
+        public HostelService(
+            IRoomRepository roomRepo,
+            IStudentRepository studentRepo,
+            IAuditLogRepository auditRepo)
         {
             _roomRepo = roomRepo;
             _studentRepo = studentRepo;
+            _auditRepo = auditRepo;
         }
 
         public async Task AddRoomAsync(string roomNumber, int capacity)
@@ -24,6 +29,10 @@ namespace HostelManagementEFCore.Services
 
             await _roomRepo.AddRoomAsync(room);
             await _roomRepo.SaveChangesAsync();
+
+            // Record Audit Log
+            await _auditRepo.LogAsync("CREATE", "Room", $"Added Room {roomNumber} with Capacity {capacity} (ID: {room.RoomId})");
+            await _auditRepo.SaveChangesAsync();
 
             Console.WriteLine($"\n[Success] Room '{roomNumber}' created with ID: {room.RoomId}");
         }
@@ -52,6 +61,10 @@ namespace HostelManagementEFCore.Services
 
             await _studentRepo.AddStudentAsync(student);
             await _studentRepo.SaveChangesAsync();
+
+            // Record Audit Log
+            await _auditRepo.LogAsync("CREATE", "Student", $"Assigned Student '{name}' (Phone: {phone}) to Room {room.RoomNumber}");
+            await _auditRepo.SaveChangesAsync();
 
             Console.WriteLine($"\n[Success] Student '{name}' assigned to Room {room.RoomNumber}!");
         }
@@ -84,6 +97,29 @@ namespace HostelManagementEFCore.Services
                         Console.WriteLine($"  -> [Student ID: {s.StudentId}] {s.Name} | Phone: {s.Phone}");
                     }
                 }
+            }
+        }
+
+        // Display all system audit trails
+        public async Task DisplayAuditLogsAsync()
+        {
+            var logs = await _auditRepo.GetAllLogsAsync();
+
+            if (logs.Count == 0)
+            {
+                Console.WriteLine("\nNo audit logs available.");
+                return;
+            }
+
+            Console.WriteLine("\n================================================================================");
+            Console.WriteLine("                                SYSTEM AUDIT LOGS                               ");
+            Console.WriteLine("================================================================================");
+            Console.WriteLine($"{"Timestamp (UTC)",-22} | {"Action",-8} | {"Entity",-8} | Details");
+            Console.WriteLine(new string('-', 80));
+
+            foreach (var log in logs)
+            {
+                Console.WriteLine($"{log.Timestamp:yyyy-MM-dd HH:mm:ss} | {log.Action,-8} | {log.EntityName,-8} | {log.Details}");
             }
         }
     }
