@@ -1,9 +1,15 @@
 ﻿using HostelManagementEFCore.Data;
+using HostelManagementEFCore.Repositories;
 using HostelManagementEFCore.Services;
 
-// Initialize DbContext and Service
 using var db = new HostelDbContext();
-var service = new HostelService(db);
+
+// Instantiate repositories
+IRoomRepository roomRepo = new RoomRepository(db);
+IStudentRepository studentRepo = new StudentRepository(db);
+
+// Inject into service
+var service = new HostelService(roomRepo, studentRepo);
 
 bool running = true;
 

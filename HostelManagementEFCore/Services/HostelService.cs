@@ -1,19 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
-using HostelManagementEFCore.Data;
-using HostelManagementEFCore.Models;
+﻿using HostelManagementEFCore.Models;
+using HostelManagementEFCore.Repositories;
 
 namespace HostelManagementEFCore.Services
 {
     public class HostelService
     {
-        private readonly HostelDbContext _db;
+        private readonly IRoomRepository _roomRepo;
+        private readonly IStudentRepository _studentRepo;
 
-        public HostelService(HostelDbContext db)
+        public HostelService(IRoomRepository roomRepo, IStudentRepository studentRepo)
         {
-            _db = db;
+            _roomRepo = roomRepo;
+            _studentRepo = studentRepo;
         }
 
-        // Add a new Room asynchronously
         public async Task AddRoomAsync(string roomNumber, int capacity)
         {
             var room = new Room
@@ -22,19 +22,24 @@ namespace HostelManagementEFCore.Services
                 Capacity = capacity
             };
 
-            await _db.Rooms.AddAsync(room);
-            await _db.SaveChangesAsync();
+            await _roomRepo.AddRoomAsync(room);
+            await _roomRepo.SaveChangesAsync();
 
             Console.WriteLine($"\n[Success] Room '{roomNumber}' created with ID: {room.RoomId}");
         }
 
-        // Add a Student and assign to a Room asynchronously
         public async Task AddStudentAsync(string name, string phone, int roomId)
         {
-            var room = await _db.Rooms.FindAsync(roomId);
+            var room = await _roomRepo.GetRoomByIdWithStudentsAsync(roomId);
             if (room == null)
             {
                 Console.WriteLine($"\n[Error] Room with ID {roomId} does not exist.");
+                return;
+            }
+
+            if (room.Students.Count >= room.Capacity)
+            {
+                Console.WriteLine($"\n[Warning] Room {room.RoomNumber} is full! (Capacity: {room.Capacity})");
                 return;
             }
 
@@ -45,18 +50,15 @@ namespace HostelManagementEFCore.Services
                 RoomId = roomId
             };
 
-            await _db.Students.AddAsync(student);
-            await _db.SaveChangesAsync();
+            await _studentRepo.AddStudentAsync(student);
+            await _studentRepo.SaveChangesAsync();
 
             Console.WriteLine($"\n[Success] Student '{name}' assigned to Room {room.RoomNumber}!");
         }
 
-        // Display all Rooms and their allocated Students using Eager Loading (.Include)
         public async Task DisplayRoomsWithStudentsAsync()
         {
-            var rooms = await _db.Rooms
-                .Include(r => r.Students)
-                .ToListAsync();
+            var rooms = await _roomRepo.GetAllRoomsWithStudentsAsync();
 
             if (rooms.Count == 0)
             {
@@ -71,7 +73,6 @@ namespace HostelManagementEFCore.Services
             foreach (var r in rooms)
             {
                 Console.WriteLine($"\nRoom ID: {r.RoomId} | Number: {r.RoomNumber} | Capacity: {r.Capacity}");
-
                 if (r.Students.Count == 0)
                 {
                     Console.WriteLine("  (No students enrolled)");
