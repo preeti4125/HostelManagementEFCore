@@ -7,6 +7,7 @@ namespace HostelManagementEFCore.Data
     {
         public DbSet<Room> Rooms => Set<Room>();
         public DbSet<Student> Students => Set<Student>();
+        public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
